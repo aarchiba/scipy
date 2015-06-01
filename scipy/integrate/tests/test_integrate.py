@@ -607,6 +607,38 @@ class LSODACheckParameterUse(ODECheckParameterUse, TestCase):
     solver_uses_jac = True
 
 
+def test_vode_backwards():
+    # FIXME: hide warnings
+    solver = ode(f)
+    solver.set_integrator('vode')
+    solver.set_initial_value([1,0],0)
+    solver.integrate(2)
+    solver.integrate(1)
+    assert_(not solver.successful())
+
+def test_vode_dense():
+    solver = ode(f)
+    solver.set_integrator('vode')
+    solver.set_initial_value([1,0],0)
+    solver.integrate(1000,step=1)
+    assert_(solver.successful())
+    t = solver.t
+    tgoal = t/2
+    assert_(solver.previous_t<tgoal<solver.t)
+    y1 = solver.integrate(tgoal)
+    assert_(solver.successful())
+    t1 = solver.t
+    assert_array_almost_equal(t1, tgoal)
+
+    solver2 = ode(f)
+    solver2.set_integrator('vode')
+    solver2.set_initial_value([1,0],0)
+    y2 = solver2.integrate(t1)
+    assert_(solver.successful())
+
+    assert_array_almost_equal(y1, y2)
+    
+
 def test_odeint_trivial_time():
     # Test that odeint succeeds when given a single time point
     # and full_output=True.  This is a regression test for gh-4282.

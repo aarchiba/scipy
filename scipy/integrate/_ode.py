@@ -105,6 +105,13 @@ class ode(object):
     A generic interface class to numeric integrators.
 
     Solve an equation system :math:`y'(t) = f(t,y)` with (optional) ``jac = df/dy``.
+    The basic operation is to set up the initial conditions and then advance through
+    the target times in order, computing y values at each point. Errors do not raise
+    exceptions; instead errors must be detected by manually checking the successful()
+    method or catching warnings. Some integrators make it possible to advance by a
+    single step of the underlying method; some further make it possible to take small
+    (within the last step) steps backward (this is called 'dense output' but is
+    currently implemented only for the 'vode' method).
 
     Parameters
     ----------
@@ -380,8 +387,14 @@ class ode(object):
 
     def integrate(self, t, step=0, relax=0):
         """Find y=y(t), set y as an initial condition, and return y."""
-        if step and self._integrator.supports_step:
-            mth = self._integrator.step
+        if step:
+            if self._integrator.supports_step:
+                mth = self._integrator.step
+                if hasattr(self, 't'):
+                    self.previous_t = self.t
+                    self.previous_y = self.y
+            else:
+                raise ValueError('Integrator does not support single-stepping')
         elif relax and self._integrator.supports_run_relax:
             mth = self._integrator.run_relax
         else:
@@ -618,6 +631,7 @@ class IntegratorBase(object):
     success = None           # success==1 if integrator was called successfully
     supports_run_relax = None
     supports_step = None
+    supports_dense = None
     supports_solout = False
     integrator_classes = []
     scalar = float
